@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Моё расписание">
-    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMzAiIGZpbGw9IiM2ZThlZmIiLz4KPHBhdGggZD0iTTY0IDQ4SDEyOEMxNDEuMjU0IDQ4IDE1MiA1OC43NDY0IDE1MiA3MlYxNTZDMTUyIDE2OS4yNTQgMTQxLjI1NCAxODAgMTI4IDE4SDY0QzUwLjc0NiAxODAgNDAgMTY5LjI1NCA0MCAxNTZWNzJDNDAgNTguNzQ2NCA1MC43NDYgNDggNjQgNDhaTTY0IDcyVjE1NkgxMjhWNzJINjRaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNjQgMTIwSDEyOEwxMjggMTM2SDY0TDUwIDEyOEw2NCAxMjBaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K">
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogItCc0L7RgdGC0LDRgtC+0YfQvdC+0LUg0L3QsCDRgdC10LrRg9C90LQiLAogICJzaG9ydF9uYW1lIjogItCd0LAg0YHQtdC60YPQvdC0IiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiM2ZThlZmIiLAogICJ0aGVtZV9jb2xvciI6ICIjNmU4ZWZiIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCNGJXeHVjejBpYUhSMGNEb3ZMM2QzZHk1M015NXZjbWN2TWpBd01DOXpkbWNpSUhacFpYZENiM2c5SWpBZ01DQXpOakFpSUdacGJHdzlJbTV2Ym1VaUlIWnBaWGRDYjNnOUlqQWdNQ0F6TmpBaUlHWnBiR3c5SW01dmJtVWlJSGh0Ykc1ek9tTnZiR3hsWTNScGIyNDlJbTFsZEdOb0lqNDhjM1I1YkdVK1BISmtaanBTUkVZK1BHSWdkMmxrZEdnOUlqRTJOaUl2UGp4aElIaHRiRzV6T25Ka1pqcFNSRVkrUEdKeUx6NDhjRDRtSTJ4cFkydGxjajQ4ZEdWNGRDOCtQQzl6ZG1jKyIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIgogICAgfQogIF0KfQ==">
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Задачи" />
+    <link rel="manifest" href="/site.webmanifest" />
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <title>Расписание дел</title>
@@ -368,7 +369,8 @@
                 "3. Английский язык",
                 "4. Русский язык",
                 "5. Литературное чтение",
-                "14:00 - Занятие с репетитором"
+                "14:00 - Занятие с репетитором",
+                "16:00 - Акробатика"
             ],
             "вторник": [
                 "8:30 - Школа",
@@ -377,7 +379,7 @@
                 "3. ИЗО",
                 "4. Русский язык",
                 "14:00 - Занятие с репетитором",
-                "16:00 - Программирование (кружок)"
+                "16:00 - Программирование"
             ],
             "среда": [
                 "8:30 - Школа",
@@ -396,7 +398,7 @@
                 "4. Русский язык",
                 "5. Технология",
                 "14:00 - Занятие с репетитором",
-                "16:00 - Программирование (кружок)"
+                "16:00 - Программирование"
             ],
             "пятница": [
                 "8:30 - Школа",
@@ -405,7 +407,7 @@
                 "3. Окружающий мир",
                 "4. Литературное чтение",
                 "13:00 - Занятие с репетитором",
-                "16:00 - Акробатика (кружок)"
+                "16:00 - Акробатика"
             ],
             "суббота": [
                 "Выходной! Но не забывай про дела :)"
@@ -418,9 +420,9 @@
         const tasksData = [
             "школьная и уличная одежда висит на местах",
             "посудомойка разобрана и загружена",
-            "учебники сложены (что не нужно - в ящик на столе)",
             "домашка сделана",
-            "рюкзак на завтра собран",
+            "рюкзак собран",
+            "учебники сложены (какие не нужны - в ящик на столе)",
             "на столе порядок"
         ];
 
