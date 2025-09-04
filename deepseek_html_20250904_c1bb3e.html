@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Моё расписание">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMzAiIGZpbGw9IiM2ZThlZmIiLz4KPHBhdGggZD0iTTY0IDQ4SDEyOEMxNDEuMjU0IDQ4IDE1MiA1OC43NDY0IDE1MiA3MlYxNTZDMTUyIDE2OS4yNTQgMTQxLjI1NCAxODAgMTI4IDE4SDY0QzUwLjc0NiAxODAgNDAgMTY5LjI1NCA0MCAxNTZWNzJDNDAgNTguNzQ2NCA1MC43NDYgNDggNjQgNDhaTTY0IDcyVjE1NkgxMjhWNzJINjRaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNjQgMTIwSDEyOEwxMjggMTM2SDY0TDUwIDEyOEw2NCAxMjBaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K">
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogItCc0L7RgdGC0LDRgtC+0YfQvdC+0LUg0L3QsCDRgdC10LrRg9C90LQiLAogICJzaG9ydF9uYW1lIjogItCd0LAg0YHQtdC60YPQvdC0IiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiM2ZThlZmIiLAogICJ0aGVtZV9jb2xvciI6ICIjNmU4ZWZiIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCNGJXeHVjejBpYUhSMGNEb3ZMM2QzZHk1M015NXZjbWN2TWpBd01DOXpkbWNpSUhacFpYZENiM2c5SWpBZ01DQXpOakFpSUdacGJHdzlJbTV2Ym1VaUlIWnBaWGRDYjNnOUlqQWdNQ0F6TmpBaUlHWnBiR3c5SW01dmJtVWlJSGh0Ykc1ek9tTnZiR3hsWTNScGIyNDlJbTFsZEdOb0lqNDhjM1I1YkdVK1BISmtaanBTUkVZK1BHSWdkMmxrZEdnOUlqRTJOaUl2UGp4aElIaHRiRzV6T25Ka1pqcFNSRVkrUEdKeUx6NDhjRDRtSTJ4cFkydGxjajQ4ZEdWNGRDOCtQQzl6ZG1jKyIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIgogICAgfQogIF0KfQ==">
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <title>Расписание дел</title>
+    <style>
+        body > :first-child{
+            -display: none !important;
+        }     
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .date-display {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        
+        .day-selector {
+            display: flex;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .day-selector::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .day-btn {
+            flex: 0 0 auto;
+            padding: 12px 15px;
+            margin-right: 8px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .day-btn.active {
+            background: white;
+            color: #6e8efb;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:active {
+            transform: translateY(2px);
+        }
+        
+        .card-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #6e8efb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .schedule-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .schedule-item:last-child {
+            border-bottom: none;
+        }
+        
+        .time {
+            font-weight: bold;
+            color: #888;
+            margin-right: 8px;
+        }
+        
+        .task-list {
+            list-style: none;
+        }
+        
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .task-item:last-child {
+            border-bottom: none;
+        }
+        
+        .task-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid #ddd;
+            margin-right: 15px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .task-checkbox:checked {
+            background: #6e8efb;
+            border-color: #6e8efb;
+        }
+        
+        .task-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 14px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .task-text {
+            flex: 1;
+            font-size: 16px;
+        }
+        
+        .task-checkbox:checked + .task-text {
+            text-decoration: line-through;
+            color: #888;
+        }
+        
+        .progress-container {
+            margin: 25px 0;
+            position: relative;
+        }
+        
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: #6e8efb;
+            font-weight: bold;
+        }
+        
+        .progress-bar {
+            height: 12px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, #6e8efb, #a777e3);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .motivation {
+            text-align: center;
+            font-style: italic;
+            margin: 20px 0;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            min-height: 24px;
+        }
+        
+        .reset-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: white;
+            border: none;
+            border-radius: 15px;
+            color: #ff6b6b;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+            max-width: 500px;
+        }
+        
+        .reset-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .celebrate {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        .confetti-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .confetti-piece {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #ff0;
+            opacity: 0;
+        }
+        
+        .reward-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 101;
+            animation: popIn 0.5s ease;
+        }
+        
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        
+        .reward-title {
+            color: #6e8efb;
+            margin-bottom: 10px;
+        }
+        
+        .reward-text {
+            margin-bottom: 15px;
+        }
+        
+        .close-reward {
+            background: #6e8efb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Моё расписание</h1>
+            <div class="date-display" id="currentDate"></div>
+        </header>
+        
+        <div class="day-selector" id="daySelector">
+            <!-- Days will be populated by JS -->
+        </div>
+        
+        <div class="card">
+            <div class="card-title">
+                <span>Расписание</span>
+                <span id="scheduleDay"></span>
+            </div>
+            <div id="scheduleContent">
+                <!-- Schedule will be populated by JS -->
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-title">
+                <span>Ежедневные дела</span>
+                <span id="completionStatus"></span>
+            </div>
+            
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>Прогресс</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+            
+            <ul class="task-list" id="taskList">
+                <!-- Tasks will be populated by JS -->
+            </ul>
+        </div>
+        
+        <div class="motivation" id="motivationText">
+            Ты можешь всё! Каждая выполненная задача приближает к цели!
+        </div>
+    </div>
+    
+    <button class="reset-btn" id="resetBtn">Начать новую неделю</button>
+    
+    <div class="celebrate" id="celebrateContainer"></div>
+    
+    <script>
+        // Data structure
+        const scheduleData = {
+            "понедельник": [
+                "8:30 - Школа",
+                "1. Разговоры о важном",
+                "2. Математика",
+                "3. Английский язык",
+                "4. Русский язык",
+                "5. Литературное чтение",
+                "14:00 - Занятие с репетитором"
+            ],
+            "вторник": [
+                "8:30 - Школа",
+                "1. Математика",
+                "2. Окружающий мир",
+                "3. ИЗО",
+                "4. Русский язык",
+                "14:00 - Занятие с репетитором",
+                "16:00 - Программирование (кружок)"
+            ],
+            "среда": [
+                "8:30 - Школа",
+                "1. Математика",
+                "2. Литературное чтение",
+                "3. Русский язык",
+                "4. Музыка",
+                "5. Основы православной культуры (ОПК)",
+                "14:00 - Занятие с репетитором"
+            ],
+            "четверг": [
+                "8:30 - Школа",
+                "1. Физкультура",
+                "2. Математика",
+                "3. Английский язык",
+                "4. Русский язык",
+                "5. Технология",
+                "14:00 - Занятие с репетитором",
+                "16:00 - Программирование (кружок)"
+            ],
+            "пятница": [
+                "8:30 - Школа",
+                "1. Физкультура",
+                "2. Русский язык",
+                "3. Окружающий мир",
+                "4. Литературное чтение",
+                "13:00 - Занятие с репетитором",
+                "16:00 - Акробатика (кружок)"
+            ],
+            "суббота": [
+                "Выходной! Но не забывай про дела :)"
+            ],
+            "воскресенье": [
+                "Выходной! Но не забывай про дела :)"
+            ]
+        };
+
+        const tasksData = [
+            "школьная и уличная одежда висит на местах",
+            "посудомойка разобрана и загружена",
+            "учебники сложены (что не нужно - в ящик на столе)",
+            "домашка сделана",
+            "рюкзак на завтра собран",
+            "на столе порядок"
+        ];
+
+        const motivations = [
+            "Ты можешь всё! Каждая выполненная задача приближает к цели!",
+            "Так держать! У тебя отлично получается!",
+            "Помни: играть можно когда все дела выполнены!",
+            "Не сдавайся! Ты уже на полпути к успеху!",
+            "Каждая галочка - это шаг к свободному времени!",
+            "Ты молодец! Продолжай в том же духе!",
+            "Выполненные дела = время для игр! 😊"
+        ];
+
+        const dayNames = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"];
+        
+        // State management
+        let currentDay = "";
+        let completedTasks = {};
+        
+        // DOM Elements
+        const daySelectorEl = document.getElementById('daySelector');
+        const currentDateEl = document.getElementById('currentDate');
+        const scheduleDayEl = document.getElementById('scheduleDay');
+        const scheduleContentEl = document.getElementById('scheduleContent');
+        const taskListEl = document.getElementById('taskList');
+        const progressPercentEl = document.getElementById('progressPercent');
+        const progressFillEl = document.getElementById('progressFill');
+        const completionStatusEl = document.getElementById('completionStatus');
+        const motivationTextEl = document.getElementById('motivationText');
+        const resetBtnEl = document.getElementById('resetBtn');
+        const celebrateContainerEl = document.getElementById('celebrateContainer');
+        
+        // Initialize the app
+        function initApp() {
+            // Load saved data
+            const savedData = localStorage.getItem('schoolSchedule');
+            if (savedData) {
+                completedTasks = JSON.parse(savedData);
+            } else {
+                // Initialize empty completed tasks
+                dayNames.forEach(day => {
+                    completedTasks[day] = Array(tasksData.length).fill(false);
+                });
+            }
+            
+            // Setup day selector
+            setupDaySelector();
+            
+            // Set current day
+            const today = new Date().toLocaleDateString('ru-RU', { weekday: 'long' }).toLowerCase();
+            selectDay(today);
+            
+            // Update date display
+            updateDateDisplay();
+            
+            // Setup event listeners
+            resetBtnEl.addEventListener('click', resetWeek);
+        }
+        
+        function setupDaySelector() {
+            daySelectorEl.innerHTML = '';
+            
+            dayNames.forEach(day => {
+                const button = document.createElement('button');
+                button.className = 'day-btn';
+                button.textContent = day.charAt(0).toUpperCase() + day.slice(1);
+                if (day === currentDay) {
+                    button.classList.add('active');
+                }
+                button.addEventListener('click', () => selectDay(day));
+                daySelectorEl.appendChild(button);
+            });
+        }
+        
+        function selectDay(day) {
+            currentDay = day;
+            
+            // Update active button
+            document.querySelectorAll('.day-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.toLowerCase() === day) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Update schedule
+            updateSchedule(day);
+            
+            // Update tasks
+            updateTasks(day);
+            
+            // Update progress
+            updateProgress(day);
+        }
+        
+        function updateSchedule(day) {
+            scheduleDayEl.textContent = day.charAt(0).toUpperCase() + day.slice(1);
+            scheduleContentEl.innerHTML = '';
+            
+            scheduleData[day].forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'schedule-item';
+                
+                // Check if it's a time-based item
+                if (item.includes('-')) {
+                    const parts = item.split('-');
+                    if (parts.length >= 2) {
+                        const timeSpan = document.createElement('span');
+                        timeSpan.className = 'time';
+                        timeSpan.textContent = parts[0].trim() + '';
+                        
+                        const textSpan = document.createElement('span');
+                        textSpan.textContent = parts.slice(1).join('-');
+                        
+                        div.appendChild(timeSpan);
+                        div.appendChild(textSpan);
+                    } else {
+                        div.textContent = item;
+                    }
+                } else {
+                    div.textContent = item;
+                }
+                
+                scheduleContentEl.appendChild(div);
+            });
+        }
+        
+        function updateTasks(day) {
+            taskListEl.innerHTML = '';
+            
+            tasksData.forEach((task, index) => {
+                const li = document.createElement('li');
+                li.className = 'task-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'task-checkbox';
+                checkbox.checked = completedTasks[day][index];
+                checkbox.addEventListener('change', () => toggleTask(day, index));
+                
+                const span = document.createElement('span');
+                span.className = 'task-text';
+                span.textContent = task;
+                
+                li.appendChild(checkbox);
+                li.appendChild(span);
+                taskListEl.appendChild(li);
+            });
+        }
+        
+        function toggleTask(day, index) {
+            completedTasks[day][index] = !completedTasks[day][index];
+            saveData();
+            updateProgress(day);
+            
+            // Small celebration for completing a task
+            if (completedTasks[day][index]) {
+                showMiniCelebration();
+                
+                // Change motivation text
+                showRandomMotivation();
+            }
+            
+            // Check if all tasks are completed
+            if (completedTasks[day].every(task => task)) {
+                showFullCelebration();
+            }
+        }
+        
+        function updateProgress(day) {
+            const completedCount = completedTasks[day].filter(Boolean).length;
+            const totalCount = tasksData.length;
+            const percentage = Math.round((completedCount / totalCount) * 100);
+            
+            progressPercentEl.textContent = `${percentage}%`;
+            progressFillEl.style.width = `${percentage}%`;
+            
+            // Update completion status text
+            completionStatusEl.textContent = `${completedCount}/${totalCount}`;
+            
+            // Change progress bar color based on percentage
+            if (percentage === 100) {
+                progressFillEl.style.background = 'linear-gradient(to right, #4caf50, #8bc34a)';
+            } else if (percentage >= 50) {
+                progressFillEl.style.background = 'linear-gradient(to right, #ff9800, #ffeb3b)';
+            } else {
+                progressFillEl.style.background = 'linear-gradient(to right, #6e8efb, #a777e3)';
+            }
+        }
+        
+        function showMiniCelebration() {
+            // Create mini confetti effect
+            for (let i = 0; i < 20; i++) {
+                createConfettiPiece(true);
+            }
+        }
+        
+        function showFullCelebration() {
+            // Create full confetti effect
+            for (let i = 0; i < 150; i++) {
+                createConfettiPiece(false);
+            }
+            
+            // Show reward message
+            setTimeout(() => {
+                showRewardMessage();
+            }, 1000);
+        }
+        
+        function createConfettiPiece(isMini) {
+            if (isMini) {
+                // Мini-салют для отдельной задачи
+                confetti({
+                    particleCount: 25,
+                    angle: 90,
+                    spread: 850,
+                    origin: { x: 0, y: 1},
+                    colors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff']
+                });
+                confetti({
+                    particleCount: 25,
+                    angle: 270,
+                    spread: 850,
+                    origin: { x: 1, y: 1 },
+                    colors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff']
+                });
+            } else {
+                // Бoльшой салют для завершения всех дел
+                confetti({
+                    particleCount: 25,
+                    spread: 660,
+                    origin: { x: 0.5, y: 1 }
+                });
+                
+                // Дoполнительные эффекты для большого салюта
+                setTimeout(() => {
+                    confetti({
+                        particleCount: 10,
+                        angle: 180,
+                        spread: 550,
+                        origin: { x: 0, y: 1 }
+                    });
+                    confetti({
+                        particleCount: 10,
+                        angle: 180,
+                        spread: 550,
+                        origin: { x: 1, y: 1 }
+                    });
+                }, 250);
+            }
+        }
+        
+        function showRewardMessage() {
+            const rewardDiv = document.createElement('div');
+            rewardDiv.className = 'reward-message';
+            rewardDiv.innerHTML = `
+                <h3 class="reward-title">Ура! Все дела выполнены! 🎉</h3>
+                <p class="reward-text">Теперь можно играть в приставку или планшет!</p>
+                <button class="close-reward">Отлично!</button>
+            `;
+            
+            document.body.appendChild(rewardDiv);
+            
+            rewardDiv.querySelector('.close-reward').addEventListener('click', () => {
+                document.body.removeChild(rewardDiv);
+            });
+        }
+        
+        function showRandomMotivation() {
+            const randomIndex = Math.floor(Math.random() * motivations.length);
+            motivationTextEl.textContent = motivations[randomIndex];
+        }
+        
+        function updateDateDisplay() {
+            const options = { weekday: 'long', day: 'numeric', month: 'long' };
+            const today = new Date().toLocaleDateString('ru-RU', options);
+            currentDateEl.textContent = "Сегодня " + today;
+        }
+        
+        function saveData() {
+            localStorage.setItem('schoolSchedule', JSON.stringify(completedTasks));
+        }
+        
+        function resetWeek() {
+            if (confirm('Точно начать новую неделю? Все прогресс будет сброшен.')) {
+                dayNames.forEach(day => {
+                    completedTasks[day] = Array(tasksData.length).fill(false);
+                });
+                saveData();
+                selectDay(currentDay);
+                motivationTextEl.textContent = "Новая неделя началась! Удачи!";
+            }
+        }
+        
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
