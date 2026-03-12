@@ -123,13 +123,13 @@
                 </div>
                 
                 <!-- Letters -->
-                <div class="flex flex-wrap justify-center gap-2" x-show="letters.length > 0">
+                <div class="flex flex-wrap justify-center gap-2 min-h-[128px] content-start" x-show="letters.length > 0">
                     <template x-for="(letter, index) in letters" :key="index">
-                        <button @click="addLetter(letter, index)" 
+                        <button @click="addLetter(letter, index)"
                                 :disabled="usedLetters.includes(index)"
-                                class="letter-btn w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 hover:from-indigo-300 hover:to-purple-400 
+                                class="letter-btn w-11 h-11 sm:w-12 sm:h-12 bg-gradient-to-br from-indigo-400 to-purple-500 hover:from-indigo-300 hover:to-purple-400
                                        disabled:opacity-30 disabled:cursor-not-allowed
-                                       rounded-2xl font-bold text-xl shadow-lg
+                                       rounded-2xl font-bold text-lg sm:text-xl shadow-lg
                                        transform active:scale-95 transition-all duration-150
                                        border border-white/20">
                             <span x-text="letter"></span>
@@ -299,9 +299,9 @@
                     return baseRating + deltaRating;
                 },
                 
-                // Уникальный ключ для слова
+                // Уникальный ключ для слова (хэш для поддержки пробелов и спецсимволов)
                 wordKey(word) {
-                    return `${word.russian}|${word.english}`;
+                    return `${word.russian.length}|${word.russian}|${word.english}`;
                 },
                 
                 async init() {
@@ -456,16 +456,19 @@
                 
                 generateLetters() {
                     if (!this.currentWord) return;
-                    
+
                     const english = this.currentWord.english.toLowerCase().replace(/[^a-z]/g, '');
                     const letters = english.split('');
-                    
-                    const extraCount = Math.floor(Math.random() * 3) + 2;
+
+                    // Добавляем лишние буквы: 2-4 для коротких слов, 4-6 для длинных
+                    const extraCount = english.length > 8
+                        ? Math.floor(Math.random() * 3) + 4
+                        : Math.floor(Math.random() * 3) + 2;
                     const alphabet = 'abcdefghijklmnopqrstuvwxyz';
                     for (let i = 0; i < extraCount; i++) {
                         letters.push(alphabet[Math.floor(Math.random() * alphabet.length)]);
                     }
-                    
+
                     this.letters = letters.sort(() => Math.random() - 0.5);
                 },
                 
@@ -483,24 +486,25 @@
                 
                 checkAnswer() {
                     if (!this.currentWord || this.answer.length === 0) return;
-                    
+
                     const userAnswer = this.answer.join('').toLowerCase();
-                    const correctAnswer = this.currentWord.english.toLowerCase();
-                    
+                    // Нормализуем правильный ответ — убираем всё кроме букв
+                    const correctAnswer = this.currentWord.english.toLowerCase().replace(/[^a-z]/g, '');
+
                     if (userAnswer === correctAnswer) {
                         this.feedback = 'Правильно! 🎉';
                         this.feedbackType = 'correct';
                         this.updateRating(1);
                         this.stats.todayCorrect++;
                     } else {
-                        this.feedback = `Неверно. Правильно: ${correctAnswer}`;
+                        this.feedback = `Неверно. Правильно: ${this.currentWord.english}`;
                         this.feedbackType = 'wrong';
                         this.updateRating(-1);
                         this.stats.todayWrong++;
                     }
-                    
+
                     this.saveToStorage();
-                    
+
                     setTimeout(() => {
                         this.selectWord();
                     }, 1500);
