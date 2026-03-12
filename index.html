@@ -2,10 +2,506 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Engly</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    
+    <!-- Tailwind CSS v4 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        [x-cloak] { display: none !important; }
+        .letter-btn { touch-action: manipulation; }
+        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
 </head>
-<body>
-    <h1>Hello, World!</h1>
+<body class="bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 min-h-screen text-white">
+    
+    <div x-data="app()" x-init="init()" x-cloak class="min-h-screen flex flex-col">
+        
+        <!-- Header with Stats -->
+        <header class="px-4 pt-4 pb-2">
+            <div class="max-w-md mx-auto">
+                <div class="flex items-center justify-between mb-3">
+                    <h1 class="text-2xl font-bold flex items-center gap-2">
+                        <i class="fas fa-book-open text-indigo-400"></i>
+                        Engly
+                    </h1>
+                    <button @click="showSettings = true" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <i class="fas fa-cog text-indigo-300"></i>
+                    </button>
+                </div>
+                
+                <!-- Stats Bar -->
+                <div class="grid grid-cols-4 gap-2 text-center text-xs">
+                    <div class="bg-white/10 rounded-xl p-2 backdrop-blur-sm">
+                        <div class="text-indigo-300 font-bold text-lg" x-text="stats.todayCorrect"></div>
+                        <div class="text-white/60">Верно сегодня</div>
+                    </div>
+                    <div class="bg-white/10 rounded-xl p-2 backdrop-blur-sm">
+                        <div class="text-red-300 font-bold text-lg" x-text="stats.todayWrong"></div>
+                        <div class="text-white/60">Ошибок сегодня</div>
+                    </div>
+                    <div class="bg-white/10 rounded-xl p-2 backdrop-blur-sm">
+                        <div class="text-green-300 font-bold text-lg" x-text="stats.totalCorrect"></div>
+                        <div class="text-white/60">Всего верно</div>
+                    </div>
+                    <div class="bg-white/10 rounded-xl p-2 backdrop-blur-sm">
+                        <div class="text-yellow-300 font-bold text-lg" x-text="positivePercent + '%'"></div>
+                        <div class="text-white/60">Успешных слов</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col items-center justify-center px-4 py-8">
+            <div class="max-w-md w-full mx-auto">
+                
+                <!-- Word Card -->
+                <div class="bg-white/10 backdrop-blur-lg rounded-3xl p-6 mb-6 border border-white/20 shadow-2xl">
+                    <div class="text-center">
+                        <div class="text-white/60 text-sm mb-2">Переведите слово</div>
+                        <h2 class="text-3xl font-bold mb-6" x-text="currentWord?.russian || 'Загрузка...'"></h2>
+                        
+                        <!-- Answer Area -->
+                        <div class="min-h-[60px] bg-white/5 rounded-2xl p-4 mb-4 border border-white/10">
+                            <div class="flex flex-wrap justify-center gap-2" x-show="answer.length > 0">
+                                <template x-for="(letter, index) in answer" :key="index">
+                                    <span class="inline-flex items-center justify-center w-10 h-10 bg-indigo-500 rounded-xl font-bold text-lg shadow-lg"
+                                          x-text="letter"></span>
+                                </template>
+                            </div>
+                            <div class="text-white/30 text-center" x-show="answer.length === 0">
+                                Составьте слово из букв ниже
+                            </div>
+                        </div>
+                        
+                        <!-- Feedback -->
+                        <div x-show="feedback" 
+                             x-transition
+                             class="h-8 flex items-center justify-center gap-2 font-semibold"
+                             :class="feedbackType === 'correct' ? 'text-green-400' : 'text-red-400'">
+                            <i :class="feedbackType === 'correct' ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
+                            <span x-text="feedback"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Letters -->
+                <div class="flex flex-wrap justify-center gap-2" x-show="letters.length > 0">
+                    <template x-for="(letter, index) in letters" :key="index">
+                        <button @click="addLetter(letter, index)" 
+                                :disabled="usedLetters.includes(index)"
+                                class="letter-btn w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 hover:from-indigo-300 hover:to-purple-400 
+                                       disabled:opacity-30 disabled:cursor-not-allowed
+                                       rounded-2xl font-bold text-xl shadow-lg
+                                       transform active:scale-95 transition-all duration-150
+                                       border border-white/20">
+                            <span x-text="letter"></span>
+                        </button>
+                    </template>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex gap-3 mt-6">
+                    <button @click="clearAnswer()" 
+                            class="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-2xl font-semibold transition-colors border border-white/20">
+                        <i class="fas fa-undo mr-2"></i>Стереть
+                    </button>
+                    <button @click="checkAnswer()" 
+                            class="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 rounded-2xl font-semibold transition-colors shadow-lg">
+                        <i class="fas fa-check mr-2"></i>Проверить
+                    </button>
+                </div>
+                
+                <!-- Skip Button -->
+                <button @click="skipWord()" class="w-full mt-3 py-3 text-white/50 hover:text-white transition-colors text-sm">
+                    <i class="fas fa-forward mr-2"></i>Пропустить слово
+                </button>
+            </div>
+        </main>
+        
+        <!-- Settings Modal -->
+        <div x-show="showSettings" 
+             x-cloak
+             class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+             @click.self="showSettings = false"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0">
+            
+            <div class="bg-slate-800 rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col"
+                 @click.stop
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="translate-y-full"
+                 x-transition:enter-end="translate-y-0"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="translate-y-0"
+                 x-transition:leave-end="translate-y-full">
+                
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between p-4 border-b border-white/10">
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <i class="fas fa-cog text-indigo-400"></i>
+                        Настройки
+                    </h2>
+                    <button @click="showSettings = false" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <!-- Modal Content -->
+                <div class="flex-1 overflow-y-auto p-4 space-y-4">
+                    <!-- Words Input -->
+                    <div>
+                        <label class="block text-sm text-white/60 mb-2">
+                            Словарь (формат: русское - english)
+                        </label>
+                        <textarea x-model="wordsInput" 
+                                  class="w-full h-40 bg-white/5 border border-white/10 rounded-2xl p-3 text-white placeholder-white/30 focus:outline-none focus:border-indigo-500 resize-none"
+                                  placeholder="кошка - cat&#10;собака - dog&#10;дом - house"></textarea>
+                        <div class="flex gap-2 mt-2">
+                            <button @click="saveWords()" 
+                                    class="flex-1 py-2 bg-indigo-500 hover:bg-indigo-400 rounded-xl font-semibold transition-colors">
+                                <i class="fas fa-save mr-2"></i>Сохранить
+                            </button>
+                            <button @click="loadWords()" 
+                                    class="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl font-semibold transition-colors">
+                                <i class="fas fa-redo mr-2"></i>Загрузить
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Stats Section -->
+                    <div class="bg-white/5 rounded-2xl p-4">
+                        <h3 class="font-semibold mb-3 flex items-center gap-2">
+                            <i class="fas fa-chart-bar text-indigo-400"></i>
+                            Статистика
+                        </h3>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-white/60">Всего слов:</span>
+                                <span class="font-semibold" x-text="words.length"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-white/60">Положительных:</span>
+                                <span class="font-semibold text-green-400" x-text="positiveWords"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-white/60">Отрицательных:</span>
+                                <span class="font-semibold text-red-400" x-text="negativeWords"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Danger Zone -->
+                    <div class="bg-red-500/10 border border-red-500/30 rounded-2xl p-4">
+                        <h3 class="font-semibold mb-3 text-red-400 flex items-center gap-2">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Опасная зона
+                        </h3>
+                        <div class="flex gap-2">
+                            <button @click="resetStats()" 
+                                    class="flex-1 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl font-semibold transition-colors text-sm">
+                                <i class="fas fa-chart-line mr-1"></i>Сброс статистики
+                            </button>
+                            <button @click="resetAll()" 
+                                    class="flex-1 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl font-semibold transition-colors text-sm">
+                                <i class="fas fa-trash mr-1"></i>Сброс всего
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Safe Area Bottom -->
+        <div class="safe-area-bottom"></div>
+    </div>
+    
+    <script>
+        function app() {
+            return {
+                words: [],
+                stats: {
+                    totalCorrect: 0,
+                    totalWrong: 0,
+                    todayCorrect: 0,
+                    todayWrong: 0,
+                    lastSessionDate: null
+                },
+                currentWord: null,
+                answer: [],
+                letters: [],
+                usedLetters: [],
+                feedback: '',
+                feedbackType: 'correct',
+                showSettings: false,
+                wordsInput: '',
+                
+                get positivePercent() {
+                    if (this.words.length === 0) return 0;
+                    const positive = this.words.filter(w => w.rating > 0).length;
+                    return Math.round((positive / this.words.length) * 100);
+                },
+                
+                get positiveWords() {
+                    return this.words.filter(w => w.rating > 0).length;
+                },
+                
+                get negativeWords() {
+                    return this.words.filter(w => w.rating < 0).length;
+                },
+                
+                init() {
+                    this.loadFromStorage();
+                    this.checkNewDay();
+                    this.selectWord();
+                    
+                    // Register service worker
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.register('sw.js');
+                    }
+                },
+                
+                loadFromStorage() {
+                    const savedWords = localStorage.getItem('engly_words');
+                    const savedStats = localStorage.getItem('engly_stats');
+                    
+                    if (savedWords) {
+                        this.words = JSON.parse(savedWords);
+                        this.wordsInput = this.words.map(w => `${w.russian} - ${w.english}`).join('\n');
+                    } else {
+                        // Default words
+                        this.words = [
+                            { russian: 'кошка', english: 'cat', rating: 0 },
+                            { russian: 'собака', english: 'dog', rating: 0 },
+                            { russian: 'дом', english: 'house', rating: 0 },
+                            { russian: 'машина', english: 'car', rating: 0 },
+                            { russian: 'книга', english: 'book', rating: 0 },
+                        ];
+                        this.wordsInput = this.words.map(w => `${w.russian} - ${w.english}`).join('\n');
+                        this.saveToStorage();
+                    }
+                    
+                    if (savedStats) {
+                        this.stats = JSON.parse(savedStats);
+                    }
+                },
+                
+                saveToStorage() {
+                    localStorage.setItem('engly_words', JSON.stringify(this.words));
+                    localStorage.setItem('engly_stats', JSON.stringify(this.stats));
+                },
+                
+                checkNewDay() {
+                    const today = new Date().toDateString();
+                    if (this.stats.lastSessionDate !== today) {
+                        this.stats.todayCorrect = 0;
+                        this.stats.todayWrong = 0;
+                        this.stats.lastSessionDate = today;
+                        this.saveToStorage();
+                    }
+                },
+                
+                selectWord() {
+                    if (this.words.length === 0) {
+                        this.currentWord = null;
+                        return;
+                    }
+                    
+                    // Weighted random selection based on rating
+                    const totalWeight = this.words.reduce((sum, word) => {
+                        // Lower rating = higher weight (more likely to be selected)
+                        return sum + (10 - word.rating);
+                    }, 0);
+                    
+                    let random = Math.random() * totalWeight;
+                    for (const word of this.words) {
+                        random -= (10 - word.rating);
+                        if (random <= 0) {
+                            this.currentWord = word;
+                            break;
+                        }
+                    }
+                    
+                    this.generateLetters();
+                    this.answer = [];
+                    this.usedLetters = [];
+                    this.feedback = '';
+                },
+                
+                generateLetters() {
+                    if (!this.currentWord) return;
+                    
+                    const english = this.currentWord.english.toLowerCase().replace(/[^a-z]/g, '');
+                    const letters = english.split('');
+                    
+                    // Add extra letters (2-4 random letters)
+                    const extraCount = Math.floor(Math.random() * 3) + 2;
+                    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+                    for (let i = 0; i < extraCount; i++) {
+                        letters.push(alphabet[Math.floor(Math.random() * alphabet.length)]);
+                    }
+                    
+                    // Shuffle letters
+                    this.letters = letters.sort(() => Math.random() - 0.5);
+                },
+                
+                addLetter(letter, index) {
+                    if (this.usedLetters.includes(index)) return;
+                    
+                    this.answer.push(letter);
+                    this.usedLetters.push(index);
+                },
+                
+                clearAnswer() {
+                    this.answer = [];
+                    this.usedLetters = [];
+                },
+                
+                checkAnswer() {
+                    if (!this.currentWord || this.answer.length === 0) return;
+                    
+                    const userAnswer = this.answer.join('').toLowerCase();
+                    const correctAnswer = this.currentWord.english.toLowerCase();
+                    
+                    if (userAnswer === correctAnswer) {
+                        // Correct answer
+                        this.feedback = 'Правильно! 🎉';
+                        this.feedbackType = 'correct';
+                        this.updateRating(1);
+                        this.stats.totalCorrect++;
+                        this.stats.todayCorrect++;
+                    } else {
+                        // Wrong answer
+                        this.feedback = `Неверно. Правильно: ${correctAnswer}`;
+                        this.feedbackType = 'wrong';
+                        this.updateRating(-1);
+                        this.stats.totalWrong++;
+                        this.stats.todayWrong++;
+                    }
+                    
+                    this.saveToStorage();
+                    
+                    // Auto select new word after delay
+                    setTimeout(() => {
+                        this.selectWord();
+                    }, 1500);
+                },
+                
+                updateRating(change) {
+                    if (!this.currentWord) return;
+                    
+                    const word = this.words.find(w => 
+                        w.russian === this.currentWord.russian && 
+                        w.english === this.currentWord.english
+                    );
+                    
+                    if (word) {
+                        if (change > 0) {
+                            word.rating += change;
+                        } else {
+                            // Going down
+                            if (word.rating >= 5) {
+                                word.rating = 0; // Reset from +5 on mistake
+                            } else {
+                                word.rating = Math.max(-10, word.rating + change);
+                            }
+                        }
+                    }
+                },
+                
+                skipWord() {
+                    this.feedback = `Правильно: ${this.currentWord?.english}`;
+                    this.feedbackType = 'wrong';
+                    setTimeout(() => {
+                        this.selectWord();
+                    }, 1500);
+                },
+                
+                saveWords() {
+                    const lines = this.wordsInput.split('\n').filter(line => line.trim());
+                    const newWords = [];
+                    
+                    for (const line of lines) {
+                        const parts = line.split('-');
+                        if (parts.length >= 2) {
+                            const russian = parts[0].trim();
+                            const english = parts.slice(1).join('-').trim();
+                            
+                            // Find existing word or create new
+                            const existing = this.words.find(w => 
+                                w.russian.toLowerCase() === russian.toLowerCase() &&
+                                w.english.toLowerCase() === english.toLowerCase()
+                            );
+                            
+                            if (existing) {
+                                newWords.push(existing);
+                            } else {
+                                newWords.push({
+                                    russian,
+                                    english,
+                                    rating: 0
+                                });
+                            }
+                        }
+                    }
+                    
+                    if (newWords.length > 0) {
+                        this.words = newWords;
+                        this.saveToStorage();
+                        this.selectWord();
+                        alert('Словарь сохранён!');
+                    } else {
+                        alert('Введите слова в формате: русское - english');
+                    }
+                },
+                
+                loadWords() {
+                    this.wordsInput = this.words.map(w => `${w.russian} - ${w.english}`).join('\n');
+                },
+                
+                resetStats() {
+                    if (confirm('Сбросить всю статистику?')) {
+                        this.stats = {
+                            totalCorrect: 0,
+                            totalWrong: 0,
+                            todayCorrect: 0,
+                            todayWrong: 0,
+                            lastSessionDate: new Date().toDateString()
+                        };
+                        this.saveToStorage();
+                    }
+                },
+                
+                resetAll() {
+                    if (confirm('Вы уверены? Это удалит все слова и статистику!')) {
+                        localStorage.removeItem('engly_words');
+                        localStorage.removeItem('engly_stats');
+                        this.loadFromStorage();
+                        this.selectWord();
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>
