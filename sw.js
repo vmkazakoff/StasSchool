@@ -2,17 +2,16 @@ const CACHE_NAME = 'engly-v1';
 const ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json',
-  'https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4',
-  'https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
+  '/manifest.json'
 ];
 
-// Install event - cache assets
+// Install event - cache only local assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS);
+    }).catch(err => {
+      console.log('SW cache install error:', err);
     })
   );
   self.skipWaiting();
@@ -34,9 +33,20 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') return;
+  
+  // Skip external resources (CDN)
+  const url = new URL(event.request.url);
+  if (url.origin !== location.origin) {
+    return; // Let browser handle CDN requests
+  }
+  
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       return cachedResponse || fetch(event.request);
+    }).catch(err => {
+      console.log('SW fetch error:', err);
     })
   );
 });
