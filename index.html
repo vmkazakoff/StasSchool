@@ -188,8 +188,11 @@
                         Словарь
                     </h2>
                     <div class="flex items-center gap-2">
-                        <button @click="showAddWord = true" class="p-2 hover:bg-white/10 rounded-full transition-colors" title="Добавить слово">
+                        <button @click="showAddWord = true; $nextTick(() => $refs.russianInput.focus())" class="p-2 hover:bg-white/10 rounded-full transition-colors" title="Добавить слово">
                             <i class="fas fa-plus text-green-400"></i>
+                        </button>
+                        <button @click="showResetConfirm = true" class="p-2 hover:bg-white/10 rounded-full transition-colors" title="Сбросить и синхронизировать">
+                            <i class="fas fa-trash text-red-400"></i>
                         </button>
                         <button @click="showDictionary = false" class="p-2 hover:bg-white/10 rounded-full transition-colors">
                             <i class="fas fa-times"></i>
@@ -280,13 +283,13 @@
                 <div class="p-6 space-y-4">
                     <div>
                         <label class="block text-sm text-white/60 mb-2">Русское слово</label>
-                        <input type="text" x-model="newWordRussian"
+                        <input type="text" x-model="newWordRussian" x-ref="russianInput"
                                class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white placeholder-white/30 focus:outline-none focus:border-green-500"
                                placeholder="например: кошка">
                     </div>
                     <div>
                         <label class="block text-sm text-white/60 mb-2">Английское слово</label>
-                        <input type="text" x-model="newWordEnglish"
+                        <input type="text" x-model="newWordEnglish" x-ref="englishInput"
                                class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white placeholder-white/30 focus:outline-none focus:border-green-500"
                                placeholder="например: cat">
                     </div>
@@ -294,6 +297,55 @@
                             class="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 rounded-xl font-semibold transition-colors shadow-lg">
                         <i class="fas fa-plus mr-2"></i>Добавить
                     </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reset Confirmation Modal -->
+        <div x-show="showResetConfirm"
+             x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+             @click.self="showResetConfirm = false"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0">
+            
+            <div class="bg-slate-800 rounded-3xl w-full max-w-sm overflow-hidden"
+                 @click.stop
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="scale-95 opacity-0"
+                 x-transition:enter-end="scale-100 opacity-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="scale-100 opacity-100"
+                 x-transition:leave-end="scale-95 opacity-0">
+                
+                <!-- Modal Header -->
+                <div class="px-6 py-4 border-b border-white/10">
+                    <h2 class="text-xl font-bold flex items-center gap-2 text-red-400">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Сброс данных
+                    </h2>
+                </div>
+                
+                <!-- Modal Content -->
+                <div class="p-6 space-y-4">
+                    <p class="text-white/70 text-sm">
+                        Все несохранённые изменения рейтингов будут потеряны.<br>
+                        Словарь будет загружен из Google Таблицы заново.
+                    </p>
+                    <div class="flex gap-3">
+                        <button @click="showResetConfirm = false"
+                                class="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-xl font-semibold transition-colors">
+                            Отмена
+                        </button>
+                        <button @click="resetAndSync()"
+                                class="flex-1 py-3 bg-red-500 hover:bg-red-400 rounded-xl font-semibold transition-colors text-white">
+                            Сбросить
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -319,6 +371,7 @@
                 feedbackType: 'correct',
                 showDictionary: false,
                 showAddWord: false,
+                showResetConfirm: false,
                 newWordRussian: '',
                 newWordEnglish: '',
                 needsSync: false,
@@ -497,6 +550,39 @@
                     this.newWordRussian = '';
                     this.newWordEnglish = '';
                     this.showAddWord = false;
+                },
+
+                // Сброс дельты и синхронизация
+                async resetAndSync() {
+                    // Сбрасываем дельту
+                    this.delta = {};
+                    this.saveToStorage();
+                    this.updateNeedsSync();
+
+                    // Закрываем модалку
+                    this.showResetConfirm = false;
+                    this.showDictionary = false;
+
+                    // Синхронизируемся с таблицей
+                    this.syncing = true;
+                    try {
+                        const response = await fetch(SYNC_URL, {
+                            method: 'GET',
+                            mode: 'cors',
+                        });
+
+                        if (!response.ok) throw new Error(`Статус: ${response.status}`);
+
+                        const data = await response.json();
+                        if (data.words && data.words.length > 0) {
+                            this.words = data.words;
+                            this.saveToStorage();
+                        }
+                    } catch (error) {
+                        console.error('Ошибка синхронизации:', error);
+                    } finally {
+                        this.syncing = false;
+                    }
                 },
 
                 // Отправка изменений в таблицу
