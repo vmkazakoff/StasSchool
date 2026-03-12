@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#0f0a1f">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -36,6 +36,9 @@
         .modal-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) transparent; }
         .modal-scroll::-webkit-scrollbar { width: 6px; }
         .modal-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+        /* Улучшаем тач-отклик в PWA */
+        button, input { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        input { font-size: 16px; } /* Предотвращает зум на iPhone */
     </style>
 </head>
 <body class="bg-[#0f0a1f] min-h-screen text-white">
@@ -186,7 +189,7 @@
                         Словарь
                     </h2>
                     <div class="flex items-center gap-2">
-                        <button @click="showAddWord = true; $nextTick(() => $refs.russianInput.focus())" class="p-2 hover:bg-white/10 rounded-full transition-colors" title="Добавить слово">
+                        <button @click="showAddWord = true; $nextTick(() => focusInput())" class="p-2 hover:bg-white/10 rounded-full transition-colors" title="Добавить слово">
                             <i class="fas fa-plus text-green-400"></i>
                         </button>
                         <button @click="showResetConfirm = true" class="p-2 hover:bg-white/10 rounded-full transition-colors" title="Сбросить и синхронизировать">
@@ -282,14 +285,17 @@
                     <div>
                         <label class="block text-sm text-white/60 mb-2">Русское слово</label>
                         <input type="text" x-model="newWordRussian" x-ref="russianInput"
+                               @click="focusInput()"
                                class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white placeholder-white/30 focus:outline-none focus:border-green-500"
-                               placeholder="например: кошка">
+                               placeholder="например: кошка"
+                               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                     </div>
                     <div>
                         <label class="block text-sm text-white/60 mb-2">Английское слово</label>
                         <input type="text" x-model="newWordEnglish" x-ref="englishInput"
                                class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white placeholder-white/30 focus:outline-none focus:border-green-500"
-                               placeholder="например: cat">
+                               placeholder="например: cat"
+                               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                     </div>
                     <button @click="addWord()"
                             class="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 rounded-xl font-semibold transition-colors shadow-lg">
@@ -547,6 +553,15 @@
                     this.newWordRussian = '';
                     this.newWordEnglish = '';
                     this.showAddWord = false;
+                },
+
+                // Фокус на input (для PWA режима)
+                focusInput() {
+                    this.$nextTick(() => {
+                        if (this.$refs.russianInput) {
+                            this.$refs.russianInput.focus();
+                        }
+                    });
                 },
 
                 // Сброс дельты и синхронизация
