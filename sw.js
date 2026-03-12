@@ -1,14 +1,14 @@
 const CACHE_NAME = 'engly-v1';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json'
+  './index.html',
+  './manifest.json'
 ];
 
 // Install event - cache only local assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
+      console.log('SW: caching assets');
       return cache.addAll(ASSETS);
     }).catch(err => {
       console.log('SW cache install error:', err);

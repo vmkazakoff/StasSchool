@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#6366f1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Engly</title>
     
     <!-- PWA Manifest -->
@@ -43,9 +44,20 @@
                         <i class="fas fa-book-open text-indigo-400"></i>
                         Engly
                     </h1>
-                    <button @click="showDictionary = true" class="p-2 hover:bg-white/10 rounded-full transition-colors" title="Словарь">
-                        <i class="fas fa-list text-indigo-300"></i>
-                    </button>
+                    <div class="flex items-center gap-1">
+                        <!-- Sync Button -->
+                        <button @click="syncWithSheet()" 
+                                x-show="needsSync"
+                                x-transition
+                                class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-white rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span x-text="syncing ? '...' : 'Сохранить'"></span>
+                        </button>
+                        <!-- Dictionary Button -->
+                        <button @click="showDictionary = true" class="p-2 hover:bg-white/10 rounded-full transition-colors" title="Словарь">
+                            <i class="fas fa-list text-indigo-300"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Stats Bar -->
@@ -138,30 +150,9 @@
             </div>
         </main>
         
-        <!-- Sync Status Bar -->
-        <div x-show="needsSync" 
-             x-transition
-             class="fixed bottom-0 left-0 right-0 px-4 pb-4 safe-area-bottom pointer-events-none">
-            <div class="max-w-md mx-auto">
-                <div class="bg-amber-500/90 backdrop-blur-lg rounded-2xl p-4 shadow-2xl pointer-events-auto flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-3">
-                        <i class="fas fa-cloud-upload-alt text-amber-100"></i>
-                        <div>
-                            <div class="font-semibold text-amber-50">Есть несохранённые изменения</div>
-                            <div class="text-xs text-amber-200">Синхронизация...</div>
-                        </div>
-                    </div>
-                    <button @click="syncWithSheet()" 
-                            class="px-4 py-2 bg-white text-amber-600 rounded-xl font-semibold text-sm hover:bg-amber-50 transition-colors whitespace-nowrap">
-                        Сохранить
-                    </button>
-                </div>
-            </div>
-        </div>
-        
         <!-- Sync Indicator (top right) -->
         <div x-show="syncing" 
-             class="fixed top-4 right-4 z-50">
+             class="fixed top-16 right-4 z-50">
             <div class="bg-indigo-500/90 backdrop-blur-lg rounded-full px-3 py-2 shadow-xl flex items-center gap-2">
                 <i class="fas fa-circle-notch fa-spin text-white"></i>
                 <span class="text-xs text-white">Синхронизация...</span>
