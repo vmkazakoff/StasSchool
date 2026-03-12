@@ -310,13 +310,13 @@
                     // 1. Мгновенная загрузка из localStorage
                     this.loadFromStorage();
                     this.checkNewDay();
-                    
+
                     // 2. Выбираем слово сразу (работаем оффлайн)
                     this.selectWord();
-                    
-                    // 3. Фоновая загрузка словаря из таблицы (не блокирует)
-                    await this.loadDictionary();
-                    
+
+                    // 3. Фоновая загрузка словаря из таблицы (НЕ блокирует)
+                    this.loadDictionary();
+
                     // Register service worker
                     if ('serviceWorker' in navigator) {
                         navigator.serviceWorker.register('sw.js');
@@ -328,15 +328,25 @@
                     const savedWords = localStorage.getItem('engly_words');
                     if (savedWords) {
                         this.words = JSON.parse(savedWords);
+                    } else {
+                        // Дефолтные слова если пусто
+                        this.words = [
+                            { russian: 'кошка', english: 'cat', rating: 0 },
+                            { russian: 'собака', english: 'dog', rating: 0 },
+                            { russian: 'дом', english: 'house', rating: 0 },
+                            { russian: 'машина', english: 'car', rating: 0 },
+                            { russian: 'книга', english: 'book', rating: 0 },
+                        ];
+                        this.saveToStorage();
                     }
-                    
+
                     // Загружаем дельту изменений
                     const savedDelta = localStorage.getItem('engly_delta');
                     if (savedDelta) {
                         this.delta = JSON.parse(savedDelta);
                         this.updateNeedsSync();
                     }
-                    
+
                     // Загружаем статистику
                     const savedStats = localStorage.getItem('engly_stats');
                     if (savedStats) {
@@ -392,7 +402,7 @@
                             ...word,
                             rating: this.getRating(word)
                         }));
-                        
+
                         // Отправляем в таблицу
                         const response = await fetch(SYNC_URL, {
                             method: 'POST',
@@ -400,24 +410,17 @@
                             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                             body: JSON.stringify({ words: wordsWithDelta }),
                         });
-                        
+
                         if (!response.ok) throw new Error(`Статус: ${response.status}`);
-                        
+
                         const result = await response.json();
                         if (!result.success) throw new Error(result.error);
-                        
-                        // Загружаем подтверждённые данные
-                        const getResponse = await fetch(SYNC_URL, {
-                            method: 'GET',
-                            mode: 'cors',
-                        });
-                        
-                        const getData = await getResponse.json();
-                        this.words = getData.words || [];
-                        this.delta = {};  // Сбрасываем дельту
+
+                        // Сбрасываем дельту после успешной отправки
+                        this.delta = {};
                         this.saveToStorage();
                         this.updateNeedsSync();
-                        
+
                     } catch (error) {
                         console.error('Ошибка синхронизации:', error);
                     } finally {
