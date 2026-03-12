@@ -1,7 +1,13 @@
 const CACHE_NAME = 'engly-v1';
 const ASSETS = [
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './favicon-96x96.png',
+  './favicon.svg',
+  './favicon.ico',
+  './apple-touch-icon.png',
+  './web-app-manifest-192x192.png',
+  './web-app-manifest-512x512.png'
 ];
 
 // Install event - cache only local assets
