@@ -127,12 +127,13 @@
                     <template x-for="(letter, index) in letters" :key="index">
                         <button @click="addLetter(letter, index)"
                                 :disabled="usedLetters.includes(index)"
-                                class="letter-btn w-11 h-11 sm:w-12 sm:h-12 bg-gradient-to-br from-indigo-400 to-purple-500 hover:from-indigo-300 hover:to-purple-400
+                                class="letter-btn min-w-[44px] h-11 sm:h-12 px-3 sm:px-4 bg-gradient-to-br from-indigo-400 to-purple-500 hover:from-indigo-300 hover:to-purple-400
                                        disabled:opacity-30 disabled:cursor-not-allowed
                                        rounded-2xl font-bold text-lg sm:text-xl shadow-lg
                                        transform active:scale-95 transition-all duration-150
-                                       border border-white/20">
-                            <span x-text="letter"></span>
+                                       border border-white/20"
+                                :class="letter === ' ' ? 'bg-white/20' : ''">
+                            <span x-text="letter === ' ' ? '␣' : letter"></span>
                         </button>
                     </template>
                 </div>
@@ -301,7 +302,8 @@
                 
                 // Уникальный ключ для слова (хэш для поддержки пробелов и спецсимволов)
                 wordKey(word) {
-                    return `${word.russian.length}|${word.russian}|${word.english}`;
+                    // Используем JSON.stringify для надёжного хэширования
+                    return JSON.stringify({r: word.russian, e: word.english});
                 },
                 
                 async init() {
@@ -457,11 +459,11 @@
                 generateLetters() {
                     if (!this.currentWord) return;
 
-                    const english = this.currentWord.english.toLowerCase().replace(/[^a-z]/g, '');
+                    const english = this.currentWord.english.toLowerCase();
                     const letters = english.split('');
 
                     // Добавляем лишние буквы: 2-4 для коротких слов, 4-6 для длинных
-                    const extraCount = english.length > 8
+                    const extraCount = english.length > 12
                         ? Math.floor(Math.random() * 3) + 4
                         : Math.floor(Math.random() * 3) + 2;
                     const alphabet = 'abcdefghijklmnopqrstuvwxyz';
@@ -469,7 +471,24 @@
                         letters.push(alphabet[Math.floor(Math.random() * alphabet.length)]);
                     }
 
-                    this.letters = letters.sort(() => Math.random() - 0.5);
+                    // Добавляем пробел в начало (всегда доступен первым)
+                    if (english.includes(' ')) {
+                        letters.unshift(' ');
+                    }
+
+                    // Добавляем дефис если есть в слове
+                    if (english.includes('-')) {
+                        letters.unshift('-');
+                    }
+
+                    this.letters = letters.sort((a, b) => {
+                        // Пробел и дефис всегда в начале
+                        if (a === ' ') return -1;
+                        if (b === ' ') return 1;
+                        if (a === '-') return -1;
+                        if (b === '-') return 1;
+                        return Math.random() - 0.5;
+                    });
                 },
                 
                 addLetter(letter, index) {
@@ -487,9 +506,8 @@
                 checkAnswer() {
                     if (!this.currentWord || this.answer.length === 0) return;
 
-                    const userAnswer = this.answer.join('').toLowerCase();
-                    // Нормализуем правильный ответ — убираем всё кроме букв
-                    const correctAnswer = this.currentWord.english.toLowerCase().replace(/[^a-z]/g, '');
+                    const userAnswer = this.answer.join('');
+                    const correctAnswer = this.currentWord.english.toLowerCase();
 
                     if (userAnswer === correctAnswer) {
                         this.feedback = 'Правильно! 🎉';
