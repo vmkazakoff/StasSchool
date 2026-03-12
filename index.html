@@ -201,54 +201,24 @@
                 
                 <!-- Modal Content -->
                 <div class="flex-1 overflow-y-auto p-4 space-y-4 modal-scroll">
-                    <!-- Sync URL -->
-                    <div>
-                        <label class="block text-sm text-white/60 mb-2">
-                            <i class="fas fa-link text-indigo-400 mr-1"></i>
-                            Google Apps Script URL
-                        </label>
-                        <input type="url" x-model="syncUrl" 
-                               placeholder="https://script.google.com/macros/s/..."
-                               class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white placeholder-white/30 focus:outline-none focus:border-indigo-500 text-sm">
-                        <div class="flex gap-2 mt-2">
-                            <button @click="saveSyncUrl()" 
-                                    class="flex-1 py-2 bg-indigo-500 hover:bg-indigo-400 rounded-xl font-semibold transition-colors text-sm">
-                                <i class="fas fa-save mr-1"></i>Сохранить
-                            </button>
-                            <button @click="testSync()" 
-                                    class="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl font-semibold transition-colors text-sm">
-                                <i class="fas fa-wifi mr-1"></i>Проверить
-                            </button>
-                        </div>
-                        <div x-show="syncStatus" 
-                             class="mt-2 text-xs"
+                    <!-- Sync Button -->
+                    <div class="bg-indigo-500/20 border border-indigo-500/30 rounded-xl p-4">
+                        <h3 class="font-semibold mb-3 flex items-center gap-2 text-sm">
+                            <i class="fas fa-cloud-sync text-indigo-400"></i>
+                            Синхронизация
+                        </h3>
+                        <button @click="syncWithSheet()"
+                                class="w-full py-3 bg-indigo-500 hover:bg-indigo-400 rounded-xl font-semibold transition-colors">
+                            <i class="fas fa-sync mr-2"></i>Синхронизировать с таблицей
+                        </button>
+                        <div x-show="syncStatus"
+                             class="mt-3 text-xs text-center"
                              :class="syncStatus.ok ? 'text-green-400' : 'text-red-400'">
                             <i :class="syncStatus.ok ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'"></i>
-                            <span x-text="syncStatus.ok ? 'Подключение успешно' : 'Ошибка: ' + syncStatus.error"></span>
+                            <span x-text="syncStatus.ok ? 'Синхронизация успешна!' : 'Ошибка: ' + syncStatus.error"></span>
                         </div>
                     </div>
-                    
-                    <!-- Words Input -->
-                    <div>
-                        <label class="block text-sm text-white/60 mb-2">
-                            <i class="fas fa-book text-indigo-400 mr-1"></i>
-                            Словарь (формат: русское - english)
-                        </label>
-                        <textarea x-model="wordsInput" 
-                                  class="w-full h-32 bg-white/5 border border-white/10 rounded-xl p-3 text-white placeholder-white/30 focus:outline-none focus:border-indigo-500 resize-none text-sm"
-                                  placeholder="кошка - cat&#10;собака - dog&#10;дом - house"></textarea>
-                        <div class="flex gap-2 mt-2">
-                            <button @click="saveWords()" 
-                                    class="flex-1 py-2 bg-indigo-500 hover:bg-indigo-400 rounded-xl font-semibold transition-colors text-sm">
-                                <i class="fas fa-save mr-1"></i>Сохранить
-                            </button>
-                            <button @click="loadWords()" 
-                                    class="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl font-semibold transition-colors text-sm">
-                                <i class="fas fa-redo mr-1"></i>Загрузить
-                            </button>
-                        </div>
-                    </div>
-                    
+
                     <!-- Stats Section -->
                     <div class="bg-white/5 rounded-xl p-4">
                         <h3 class="font-semibold mb-3 flex items-center gap-2 text-sm">
@@ -393,7 +363,6 @@
                 feedbackType: 'correct',
                 showSettings: false,
                 showDictionary: false,
-                wordsInput: '',
                 syncUrl: 'https://script.google.com/macros/s/AKfycbzPlg2UGAFIky4g_kIR9SoS8T0de0HUaBiQ9nLUaIq0wj8oGOLZFADP1Xr8Tt2r4CR8/exec',
                 syncStatus: null,
                 needsSync: false,
@@ -439,15 +408,9 @@
                 loadFromStorage() {
                     const savedWords = localStorage.getItem('engly_words');
                     const savedStats = localStorage.getItem('engly_stats');
-                    const savedSyncUrl = localStorage.getItem('engly_sync_url');
-                    
-                    if (savedSyncUrl) {
-                        this.syncUrl = savedSyncUrl;
-                    }
-                    
+
                     if (savedWords) {
                         this.words = JSON.parse(savedWords);
-                        this.wordsInput = this.words.map(w => `${w.russian} - ${w.english}`).join('\n');
                     } else {
                         this.words = [
                             { russian: 'кошка', english: 'cat', rating: 0 },
@@ -456,10 +419,9 @@
                             { russian: 'машина', english: 'car', rating: 0 },
                             { russian: 'книга', english: 'book', rating: 0 },
                         ];
-                        this.wordsInput = this.words.map(w => `${w.russian} - ${w.english}`).join('\n');
                         this.saveToStorage();
                     }
-                    
+
                     if (savedStats) {
                         this.stats = JSON.parse(savedStats);
                     }
@@ -588,114 +550,39 @@
                         this.selectWord();
                     }, 1500);
                 },
-                
-                saveSyncUrl() {
-                    if (!this.syncUrl.trim()) {
-                        alert('Введите URL');
-                        return;
-                    }
-                    localStorage.setItem('engly_sync_url', this.syncUrl.trim());
-                    alert('URL сохранён!');
-                },
-                
-                async testSync() {
-                    if (!this.syncUrl.trim()) {
-                        alert('Сначала введите URL');
-                        return;
-                    }
-                    
+
+                async syncWithSheet() {
                     this.syncStatus = null;
                     try {
-                        const response = await fetch(this.syncUrl, {
-                            method: 'GET',
-                            mode: 'cors',
-                        });
-                        
-                        if (!response.ok) throw new Error(`Статус: ${response.status}`);
-                        
-                        const data = await response.json();
-                        this.syncStatus = { ok: true, count: data.words?.length || 0 };
-                    } catch (error) {
-                        this.syncStatus = { ok: false, error: error.message };
-                    }
-                },
-                
-                async syncWithSheet() {
-                    if (!this.syncUrl.trim()) {
-                        alert('Настройте URL Google Apps Script в настройках');
-                        return;
-                    }
-                    
-                    try {
-                        // Отправляем данные в таблицу
+                        // Отправляем данные в таблицу (GAS требует text/plain)
                         const response = await fetch(this.syncUrl, {
                             method: 'POST',
                             mode: 'cors',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                             body: JSON.stringify({ words: this.words }),
                         });
-                        
+
                         if (!response.ok) throw new Error(`Статус: ${response.status}`);
-                        
+
                         const result = await response.json();
                         if (!result.success) throw new Error(result.error);
-                        
+
                         // Загружаем обновлённые данные
                         const getResponse = await fetch(this.syncUrl, {
                             method: 'GET',
                             mode: 'cors',
                         });
-                        
+
                         const getData = await getResponse.json();
                         this.words = getData.words || [];
-                        this.wordsInput = this.words.map(w => `${w.russian} - ${w.english}`).join('\n');
                         this.saveToStorage();
                         this.needsSync = false;
-                        
-                        alert('Синхронизация успешна! 🎉');
+                        this.syncStatus = { ok: true };
                     } catch (error) {
-                        alert('Ошибка синхронизации: ' + error.message);
+                        this.syncStatus = { ok: false, error: error.message };
                     }
                 },
-                
-                saveWords() {
-                    const lines = this.wordsInput.split('\n').filter(line => line.trim());
-                    const newWords = [];
-                    
-                    for (const line of lines) {
-                        const parts = line.split('-');
-                        if (parts.length >= 2) {
-                            const russian = parts[0].trim();
-                            const english = parts.slice(1).join('-').trim();
-                            
-                            const existing = this.words.find(w => 
-                                w.russian.toLowerCase() === russian.toLowerCase() &&
-                                w.english.toLowerCase() === english.toLowerCase()
-                            );
-                            
-                            if (existing) {
-                                newWords.push(existing);
-                            } else {
-                                newWords.push({ russian, english, rating: 0 });
-                            }
-                        }
-                    }
-                    
-                    if (newWords.length > 0) {
-                        this.words = newWords;
-                        this.saveToStorage();
-                        this.selectWord();
-                        this.needsSync = true;
-                        alert('Словарь сохранён!');
-                    } else {
-                        alert('Введите слова в формате: русское - english');
-                    }
-                },
-                
-                loadWords() {
-                    this.wordsInput = this.words.map(w => `${w.russian} - ${w.english}`).join('\n');
-                },
-                
+
                 resetStats() {
                     if (confirm('Сбросить всю статистику?')) {
                         this.stats = {
