@@ -174,7 +174,7 @@
              x-transition:leave="transition ease-in duration-200"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0">
-
+            
             <div class="bg-slate-800 rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col"
                  @click.stop
                  x-transition:enter="transition ease-out duration-300"
@@ -215,7 +215,7 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- Words List -->
                 <div class="flex-1 overflow-y-auto sm:px-4 sm:pb-4 modal-scroll">
                     <template x-for="word in sortedWords" :key="word.russian + word.english">
@@ -227,8 +227,8 @@
                             <div class="flex items-center gap-2">
                                 <span class="text-xs text-white/50">Рейтинг:</span>
                                 <span class="px-2 py-1 rounded-lg text-xs font-bold"
-                                      :class="word.rating > 0 ? 'bg-green-500/20 text-green-400' : 
-                                              word.rating < 0 ? 'bg-red-500/20 text-red-400' : 
+                                      :class="word.rating > 0 ? 'bg-green-500/20 text-green-400' :
+                                              word.rating < 0 ? 'bg-red-500/20 text-red-400' :
                                               'bg-white/10 text-white/60'"
                                       x-text="word.rating > 0 ? '+' + word.rating : word.rating"></span>
                             </div>
@@ -249,6 +249,7 @@
         function app() {
             return {
                 words: [],
+                delta: {},  // Изменения рейтингов: { "кошка|cat": 5 }
                 stats: {
                     totalCorrect: 0,
                     totalWrong: 0,
@@ -269,40 +270,55 @@
                 
                 get positivePercent() {
                     if (this.words.length === 0) return 0;
-                    const positive = this.words.filter(w => w.rating > 0).length;
+                    const positive = this.words.filter(w => this.getRating(w) > 0).length;
                     return Math.round((positive / this.words.length) * 100);
                 },
                 
                 get positiveWords() {
-                    return this.words.filter(w => w.rating > 0).length;
+                    return this.words.filter(w => this.getRating(w) > 0).length;
                 },
                 
                 get negativeWords() {
-                    return this.words.filter(w => w.rating < 0).length;
+                    return this.words.filter(w => this.getRating(w) < 0).length;
                 },
                 
                 get sortedWords() {
                     const sorted = [...this.words];
+                    // Применяем дельту для отображения
+                    sorted.forEach(w => w.displayRating = this.getRating(w));
                     if (this.sortMode === 'russian') {
                         sorted.sort((a, b) => a.russian.localeCompare(b.russian, 'ru'));
                     } else if (this.sortMode === 'english') {
                         sorted.sort((a, b) => a.english.localeCompare(b.english, 'en'));
                     } else if (this.sortMode === 'rating') {
-                        sorted.sort((a, b) => b.rating - a.rating);
+                        sorted.sort((a, b) => this.getRating(b) - this.getRating(a));
                     }
                     return sorted;
                 },
                 
+                // Получить рейтинг слова с учётом дельты
+                getRating(word) {
+                    const key = this.wordKey(word);
+                    const baseRating = word.rating || 0;
+                    const deltaRating = this.delta[key] || 0;
+                    return baseRating + deltaRating;
+                },
+                
+                // Уникальный ключ для слова
+                wordKey(word) {
+                    return `${word.russian}|${word.english}`;
+                },
+                
                 async init() {
-                    // Сначала загружаем локальные данные для быстрого старта
+                    // 1. Мгновенная загрузка из localStorage
                     this.loadFromStorage();
                     this.checkNewDay();
                     
-                    // Затем пробуем синхронизироваться с таблицей
-                    await this.syncFromSheet();
-                    
-                    // Выбираем слово
+                    // 2. Выбираем слово сразу (работаем оффлайн)
                     this.selectWord();
+                    
+                    // 3. Фоновая загрузка словаря из таблицы (не блокирует)
+                    await this.loadDictionary();
                     
                     // Register service worker
                     if ('serviceWorker' in navigator) {
@@ -311,13 +327,21 @@
                 },
                 
                 loadFromStorage() {
+                    // Загружаем словарь (база)
                     const savedWords = localStorage.getItem('engly_words');
-                    const savedStats = localStorage.getItem('engly_stats');
-
                     if (savedWords) {
                         this.words = JSON.parse(savedWords);
                     }
-
+                    
+                    // Загружаем дельту изменений
+                    const savedDelta = localStorage.getItem('engly_delta');
+                    if (savedDelta) {
+                        this.delta = JSON.parse(savedDelta);
+                        this.updateNeedsSync();
+                    }
+                    
+                    // Загружаем статистику
+                    const savedStats = localStorage.getItem('engly_stats');
                     if (savedStats) {
                         this.stats = JSON.parse(savedStats);
                     }
@@ -325,6 +349,7 @@
                 
                 saveToStorage() {
                     localStorage.setItem('engly_words', JSON.stringify(this.words));
+                    localStorage.setItem('engly_delta', JSON.stringify(this.delta));
                     localStorage.setItem('engly_stats', JSON.stringify(this.stats));
                 },
                 
@@ -338,8 +363,8 @@
                     }
                 },
                 
-                async syncFromSheet() {
-                    this.syncing = true;
+                // Загрузка словаря из таблицы (фон)
+                async loadDictionary() {
                     try {
                         const response = await fetch(SYNC_URL, {
                             method: 'GET',
@@ -350,27 +375,33 @@
                         
                         const data = await response.json();
                         if (data.words && data.words.length > 0) {
+                            // Сохраняем базовый словарь
                             this.words = data.words;
                             this.saveToStorage();
-                            this.needsSync = false;
+                            // Дельта остаётся, применяется поверх
                         }
                     } catch (error) {
-                        // Тихая ошибка - работаем с локальными данными
-                        console.log('Синхронизация не удалась, работаем оффлайн:', error.message);
-                    } finally {
-                        this.syncing = false;
+                        // Тихая ошибка — работаем с локальными данными
+                        console.log('Словарь не загружен, работаем оффлайн');
                     }
                 },
                 
+                // Отправка изменений в таблицу
                 async syncWithSheet() {
                     this.syncing = true;
                     try {
-                        // Отправляем данные в таблицу (GAS требует text/plain)
+                        // Применяем дельту к базовым словам
+                        const wordsWithDelta = this.words.map(word => ({
+                            ...word,
+                            rating: this.getRating(word)
+                        }));
+                        
+                        // Отправляем в таблицу
                         const response = await fetch(SYNC_URL, {
                             method: 'POST',
                             mode: 'cors',
                             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                            body: JSON.stringify({ words: this.words }),
+                            body: JSON.stringify({ words: wordsWithDelta }),
                         });
                         
                         if (!response.ok) throw new Error(`Статус: ${response.status}`);
@@ -378,7 +409,7 @@
                         const result = await response.json();
                         if (!result.success) throw new Error(result.error);
                         
-                        // Загружаем обновлённые данные для подтверждения
+                        // Загружаем подтверждённые данные
                         const getResponse = await fetch(SYNC_URL, {
                             method: 'GET',
                             mode: 'cors',
@@ -386,13 +417,20 @@
                         
                         const getData = await getResponse.json();
                         this.words = getData.words || [];
+                        this.delta = {};  // Сбрасываем дельту
                         this.saveToStorage();
-                        this.needsSync = false;
+                        this.updateNeedsSync();
+                        
                     } catch (error) {
                         console.error('Ошибка синхронизации:', error);
                     } finally {
                         this.syncing = false;
                     }
+                },
+                
+                updateNeedsSync() {
+                    const hasChanges = Object.keys(this.delta).length > 0;
+                    this.needsSync = hasChanges;
                 },
                 
                 selectWord() {
@@ -402,12 +440,13 @@
                     }
                     
                     const totalWeight = this.words.reduce((sum, word) => {
-                        return sum + (10 - word.rating);
+                        const rating = this.getRating(word);
+                        return sum + (10 - rating);
                     }, 0);
                     
                     let random = Math.random() * totalWeight;
                     for (const word of this.words) {
-                        random -= (10 - word.rating);
+                        random -= (10 - this.getRating(word));
                         if (random <= 0) {
                             this.currentWord = word;
                             break;
@@ -468,7 +507,6 @@
                     }
                     
                     this.saveToStorage();
-                    this.needsSync = true;
                     
                     setTimeout(() => {
                         this.selectWord();
@@ -478,28 +516,36 @@
                 updateRating(change) {
                     if (!this.currentWord) return;
                     
-                    const word = this.words.find(w => 
-                        w.russian === this.currentWord.russian && 
-                        w.english === this.currentWord.english
-                    );
+                    const key = this.wordKey(this.currentWord);
+                    const currentDelta = this.delta[key] || 0;
+                    const baseRating = this.currentWord.rating || 0;
+                    const effectiveRating = baseRating + currentDelta;
                     
-                    if (word) {
-                        if (change > 0) {
-                            word.rating += change;
+                    let newDelta;
+                    if (change > 0) {
+                        newDelta = currentDelta + change;
+                    } else {
+                        // Идём вниз
+                        if (effectiveRating >= 5) {
+                            // Сброс к 0: дельта = -baseRating
+                            newDelta = -baseRating;
                         } else {
-                            if (word.rating >= 5) {
-                                word.rating = 0;
-                            } else {
-                                word.rating = Math.max(-10, word.rating + change);
+                            newDelta = currentDelta + change;
+                            // Ограничиваем минимум -10
+                            if (baseRating + newDelta < -10) {
+                                newDelta = -10 - baseRating;
                             }
                         }
                     }
+                    
+                    this.delta[key] = newDelta;
+                    this.updateNeedsSync();
+                    this.saveToStorage();
                 },
                 
                 skipWord() {
                     this.feedback = `Правильно: ${this.currentWord?.english}`;
                     this.feedbackType = 'wrong';
-                    this.needsSync = true;
                     setTimeout(() => {
                         this.selectWord();
                     }, 1500);
