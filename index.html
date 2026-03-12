@@ -71,22 +71,18 @@
                 </div>
                 
                 <!-- Stats Bar -->
-                <div class="grid grid-cols-4 gap-2 text-center text-xs">
+                <div class="grid grid-cols-3 gap-2 text-center text-xs">
                     <div class="bg-white/10 rounded-xl p-2 backdrop-blur-sm">
                         <div class="text-indigo-300 font-bold text-lg" x-text="stats.todayCorrect"></div>
-                        <div class="text-white/60">Верно сегодня</div>
+                        <div class="text-white/60">Верно за сегодня</div>
                     </div>
                     <div class="bg-white/10 rounded-xl p-2 backdrop-blur-sm">
                         <div class="text-red-300 font-bold text-lg" x-text="stats.todayWrong"></div>
-                        <div class="text-white/60">Ошибок сегодня</div>
-                    </div>
-                    <div class="bg-white/10 rounded-xl p-2 backdrop-blur-sm">
-                        <div class="text-green-300 font-bold text-lg" x-text="stats.totalCorrect"></div>
-                        <div class="text-white/60">Всего верно</div>
+                        <div class="text-white/60">Ошибок за сегодня</div>
                     </div>
                     <div class="bg-white/10 rounded-xl p-2 backdrop-blur-sm">
                         <div class="text-yellow-300 font-bold text-lg" x-text="positivePercent + '%'"></div>
-                        <div class="text-white/60">Успешных слов</div>
+                        <div class="text-white/60">Словаря выучено</div>
                     </div>
                 </div>
             </div>
@@ -227,10 +223,10 @@
                             <div class="flex items-center gap-2">
                                 <span class="text-xs text-white/50">Рейтинг:</span>
                                 <span class="px-2 py-1 rounded-lg text-xs font-bold"
-                                      :class="word.rating > 0 ? 'bg-green-500/20 text-green-400' :
-                                              word.rating < 0 ? 'bg-red-500/20 text-red-400' :
+                                      :class="word.displayRating > 0 ? 'bg-green-500/20 text-green-400' :
+                                              word.displayRating < 0 ? 'bg-red-500/20 text-red-400' :
                                               'bg-white/10 text-white/60'"
-                                      x-text="word.rating > 0 ? '+' + word.rating : word.rating"></span>
+                                      x-text="word.displayRating > 0 ? '+' + word.displayRating : word.displayRating"></span>
                             </div>
                         </div>
                     </template>
@@ -251,8 +247,6 @@
                 words: [],
                 delta: {},  // Изменения рейтингов: { "кошка|cat": 5 }
                 stats: {
-                    totalCorrect: 0,
-                    totalWrong: 0,
                     todayCorrect: 0,
                     todayWrong: 0,
                     lastSessionDate: null
@@ -496,13 +490,11 @@
                         this.feedback = 'Правильно! 🎉';
                         this.feedbackType = 'correct';
                         this.updateRating(1);
-                        this.stats.totalCorrect++;
                         this.stats.todayCorrect++;
                     } else {
                         this.feedback = `Неверно. Правильно: ${correctAnswer}`;
                         this.feedbackType = 'wrong';
                         this.updateRating(-1);
-                        this.stats.totalWrong++;
                         this.stats.todayWrong++;
                     }
                     
