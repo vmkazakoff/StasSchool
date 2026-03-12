@@ -99,7 +99,7 @@
                 <div class="bg-white/10 backdrop-blur-lg rounded-3xl p-6 mb-6 border border-white/20 shadow-2xl">
                     <div class="text-center">
                         <div class="text-white/60 text-sm mb-2">Переведите слово</div>
-                        <h2 class="text-3xl font-bold mb-6" x-text="currentWord?.russian || 'Загрузка...'"></h2>
+                        <h2 class="text-3xl font-bold mb-6" x-text="isLoading ? 'Загрузка...' : (currentWord?.russian || 'Загрузка...')"></h2>
                         
                         <!-- Answer Area -->
                         <div class="min-h-[60px] bg-white/5 rounded-2xl p-4 mb-4 border border-white/10">
@@ -126,7 +126,7 @@
                 </div>
                 
                 <!-- Letters -->
-                <div class="flex flex-wrap justify-center gap-2 min-h-[128px] content-start" x-show="letters.length > 0">
+                <div class="flex flex-wrap justify-center gap-2 min-h-[128px] content-start" x-show="letters.length > 0 && !isLoading">
                     <template x-for="letter in letters" :key="letter">
                         <button @click="addLetter(letter)"
                                 class="letter-btn min-w-[44px] h-11 sm:h-12 px-3 sm:px-4 bg-gradient-to-br from-indigo-400 to-purple-500 hover:from-indigo-300 hover:to-purple-400
@@ -140,7 +140,7 @@
                 </div>
                 
                 <!-- Action Buttons -->
-                <div class="flex gap-3 mt-6">
+                <div class="flex gap-3 mt-6" x-show="!isLoading">
                     <button @click="clearAnswer()" 
                             class="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-2xl font-semibold transition-colors border border-white/20">
                         <i class="fas fa-undo mr-2"></i>Стереть
@@ -152,7 +152,7 @@
                 </div>
                 
                 <!-- Skip Button -->
-                <button @click="skipWord()" class="w-full mt-3 py-3 text-white/50 hover:text-white transition-colors text-sm">
+                <button @click="skipWord()" class="w-full mt-3 py-3 text-white/50 hover:text-white transition-colors text-sm" x-show="!isLoading">
                     <i class="fas fa-forward mr-2"></i>Пропустить слово
                 </button>
             </div>
@@ -380,6 +380,7 @@
                 needsSync: false,
                 syncing: false,
                 sortMode: 'russian',
+                isLoading: false,  // Состояние загрузки
                 
                 get positivePercent() {
                     if (this.words.length === 0) return 0;
@@ -431,9 +432,6 @@
 
                     // 2. Выбираем слово сразу (работаем оффлайн)
                     this.selectWord();
-
-                    // 3. Фоновая загрузка словаря из таблицы (НЕ блокирует)
-                    this.loadDictionary();
 
                     // Register service worker
                     if ('serviceWorker' in navigator) {
@@ -490,17 +488,17 @@
 
                         const data = await response.json();
                         if (data.words && data.words.length > 0) {
-                            // Сливаем с локальными словами
+                            // Берём слова из таблицы как основу
                             const remoteWords = data.words;
                             const remoteKeys = new Set(remoteWords.map(w => this.wordKey(w)));
 
-                            // Добавляем локальные слова которых нет в таблице
+                            // Добавляем локальные слова которых точно нет в таблице
                             const merged = [...remoteWords];
                             for (const localWord of this.words) {
                                 const key = this.wordKey(localWord);
                                 if (!remoteKeys.has(key)) {
-                                    // Это локальное слово, добавляем
                                     merged.push(localWord);
+                                    remoteKeys.add(key); // Чтобы не добавить ещё раз
                                 }
                             }
 
@@ -566,17 +564,34 @@
 
                 // Сброс дельты и синхронизация
                 async resetAndSync() {
-                    // Сбрасываем дельту
-                    this.delta = {};
-                    this.saveToStorage();
-                    this.updateNeedsSync();
-
                     // Закрываем модалку
                     this.showResetConfirm = false;
                     this.showDictionary = false;
 
-                    // Синхронизируемся с таблицей
+                    // Полностью очищаем всё
+                    this.words = [];
+                    this.delta = {};
+                    this.currentWord = null;
+                    this.answer = [];
+                    this.letters = [];
+                    this.feedback = '';
+                    
+                    localStorage.removeItem('engly_words');
+                    localStorage.removeItem('engly_delta');
+                    localStorage.removeItem('engly_stats');
+                    
+                    this.stats = {
+                        todayCorrect: 0,
+                        todayWrong: 0,
+                        lastSessionDate: null
+                    };
+                    
+                    this.updateNeedsSync();
+
+                    // Показываем загрузку
+                    this.isLoading = true;
                     this.syncing = true;
+                    
                     try {
                         const response = await fetch(SYNC_URL, {
                             method: 'GET',
@@ -593,7 +608,9 @@
                     } catch (error) {
                         console.error('Ошибка синхронизации:', error);
                     } finally {
+                        this.isLoading = false;
                         this.syncing = false;
+                        this.selectWord();
                     }
                 },
 
