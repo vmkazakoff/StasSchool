@@ -187,9 +187,14 @@
                         <i class="fas fa-list text-indigo-400"></i>
                         Словарь
                     </h2>
-                    <button @click="showDictionary = false" class="p-2 hover:bg-white/10 rounded-full transition-colors">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button @click="showAddWord = true" class="p-2 hover:bg-white/10 rounded-full transition-colors" title="Добавить слово">
+                            <i class="fas fa-plus text-green-400"></i>
+                        </button>
+                        <button @click="showDictionary = false" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Sort Controls -->
@@ -238,6 +243,60 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Add Word Modal -->
+        <div x-show="showAddWord"
+             x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+             @click.self="showAddWord = false"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0">
+            
+            <div class="bg-slate-800 rounded-3xl w-full max-w-sm overflow-hidden"
+                 @click.stop
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="scale-95 opacity-0"
+                 x-transition:enter-end="scale-100 opacity-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="scale-100 opacity-100"
+                 x-transition:leave-end="scale-95 opacity-0">
+                
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <i class="fas fa-plus text-green-400"></i>
+                        Добавить слово
+                    </h2>
+                    <button @click="showAddWord = false" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <!-- Modal Content -->
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm text-white/60 mb-2">Русское слово</label>
+                        <input type="text" x-model="newWordRussian"
+                               class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white placeholder-white/30 focus:outline-none focus:border-green-500"
+                               placeholder="например: кошка">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-white/60 mb-2">Английское слово</label>
+                        <input type="text" x-model="newWordEnglish"
+                               class="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white placeholder-white/30 focus:outline-none focus:border-green-500"
+                               placeholder="например: cat">
+                    </div>
+                    <button @click="addWord()"
+                            class="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 rounded-xl font-semibold transition-colors shadow-lg">
+                        <i class="fas fa-plus mr-2"></i>Добавить
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
     
     <script>
@@ -259,6 +318,9 @@
                 feedback: '',
                 feedbackType: 'correct',
                 showDictionary: false,
+                showAddWord: false,
+                newWordRussian: '',
+                newWordEnglish: '',
                 needsSync: false,
                 syncing: false,
                 sortMode: 'russian',
@@ -328,16 +390,6 @@
                     const savedWords = localStorage.getItem('engly_words');
                     if (savedWords) {
                         this.words = JSON.parse(savedWords);
-                    } else {
-                        // Дефолтные слова если пусто
-                        this.words = [
-                            { russian: 'кошка', english: 'cat', rating: 0 },
-                            { russian: 'собака', english: 'dog', rating: 0 },
-                            { russian: 'дом', english: 'house', rating: 0 },
-                            { russian: 'машина', english: 'car', rating: 0 },
-                            { russian: 'книга', english: 'book', rating: 0 },
-                        ];
-                        this.saveToStorage();
                     }
 
                     // Загружаем дельту изменений
@@ -377,13 +429,26 @@
                             method: 'GET',
                             mode: 'cors',
                         });
-                        
+
                         if (!response.ok) throw new Error(`Статус: ${response.status}`);
-                        
+
                         const data = await response.json();
                         if (data.words && data.words.length > 0) {
-                            // Сохраняем базовый словарь
-                            this.words = data.words;
+                            // Сливаем с локальными словами
+                            const remoteWords = data.words;
+                            const remoteKeys = new Set(remoteWords.map(w => this.wordKey(w)));
+
+                            // Добавляем локальные слова которых нет в таблице
+                            const merged = [...remoteWords];
+                            for (const localWord of this.words) {
+                                const key = this.wordKey(localWord);
+                                if (!remoteKeys.has(key)) {
+                                    // Это локальное слово, добавляем
+                                    merged.push(localWord);
+                                }
+                            }
+
+                            this.words = merged;
                             this.saveToStorage();
                             // Дельта остаётся, применяется поверх
                         }
@@ -392,7 +457,48 @@
                         console.log('Словарь не загружен, работаем оффлайн');
                     }
                 },
-                
+
+                // Добавление нового слова
+                addWord() {
+                    const russian = this.newWordRussian.trim();
+                    const english = this.newWordEnglish.trim();
+
+                    if (!russian || !english) {
+                        alert('Введите оба слова');
+                        return;
+                    }
+
+                    // Проверяем дубликат
+                    const exists = this.words.some(w =>
+                        w.russian.toLowerCase() === russian.toLowerCase() &&
+                        w.english.toLowerCase() === english.toLowerCase()
+                    );
+
+                    if (exists) {
+                        alert('Такое слово уже есть в словаре');
+                        return;
+                    }
+
+                    // Добавляем слово
+                    this.words.push({
+                        russian,
+                        english,
+                        rating: 0
+                    });
+
+                    // Добавляем в дельту (для синхронизации)
+                    const key = this.wordKey({ russian, english });
+                    this.delta[key] = 0;
+
+                    this.saveToStorage();
+                    this.updateNeedsSync();
+
+                    // Очищаем форму
+                    this.newWordRussian = '';
+                    this.newWordEnglish = '';
+                    this.showAddWord = false;
+                },
+
                 // Отправка изменений в таблицу
                 async syncWithSheet() {
                     this.syncing = true;
