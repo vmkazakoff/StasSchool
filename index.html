@@ -124,11 +124,9 @@
                 
                 <!-- Letters -->
                 <div class="flex flex-wrap justify-center gap-2 min-h-[128px] content-start" x-show="letters.length > 0">
-                    <template x-for="(letter, index) in letters" :key="index">
-                        <button @click="addLetter(letter, index)"
-                                :disabled="usedLetters.includes(index)"
+                    <template x-for="letter in letters" :key="letter">
+                        <button @click="addLetter(letter)"
                                 class="letter-btn min-w-[44px] h-11 sm:h-12 px-3 sm:px-4 bg-gradient-to-br from-indigo-400 to-purple-500 hover:from-indigo-300 hover:to-purple-400
-                                       disabled:opacity-30 disabled:cursor-not-allowed
                                        rounded-2xl font-bold text-lg sm:text-xl shadow-lg
                                        transform active:scale-95 transition-all duration-150
                                        border border-white/20"
@@ -366,7 +364,6 @@
                 currentWord: null,
                 answer: [],
                 letters: [],
-                usedLetters: [],
                 feedback: '',
                 feedbackType: 'correct',
                 showDictionary: false,
@@ -647,7 +644,6 @@
                     
                     this.generateLetters();
                     this.answer = [];
-                    this.usedLetters = [];
                     this.feedback = '';
                 },
                 
@@ -655,24 +651,32 @@
                     if (!this.currentWord) return;
 
                     const english = this.currentWord.english.toLowerCase();
-                    const letters = english.split('');
+                    
+                    // Берём уникальные буквы из слова
+                    const uniqueLetters = [...new Set(english.split(''))];
+                    const letters = [...uniqueLetters];
 
-                    // Добавляем лишние буквы: 2-4 для коротких слов, 4-6 для длинных
+                    // Добавляем лишние буквы (проверяем на дубликаты)
                     const extraCount = english.length > 12
                         ? Math.floor(Math.random() * 3) + 4
                         : Math.floor(Math.random() * 3) + 2;
                     const alphabet = 'abcdefghijklmnopqrstuvwxyz';
                     for (let i = 0; i < extraCount; i++) {
-                        letters.push(alphabet[Math.floor(Math.random() * alphabet.length)]);
+                        let randomLetter = alphabet[Math.floor(Math.random() * alphabet.length)];
+                        // Проверяем что буква ещё не добавлена
+                        while (letters.includes(randomLetter)) {
+                            randomLetter = alphabet[Math.floor(Math.random() * alphabet.length)];
+                        }
+                        letters.push(randomLetter);
                     }
 
-                    // Добавляем пробел в начало (всегда доступен первым)
-                    if (english.includes(' ')) {
+                    // Добавляем пробел в начало (только один, если есть в слове)
+                    if (english.includes(' ') && !letters.includes(' ')) {
                         letters.unshift(' ');
                     }
 
-                    // Добавляем дефис если есть в слове
-                    if (english.includes('-')) {
+                    // Добавляем дефис если есть в слове (только один)
+                    if (english.includes('-') && !letters.includes('-')) {
                         letters.unshift('-');
                     }
 
@@ -685,19 +689,15 @@
                         return Math.random() - 0.5;
                     });
                 },
-                
-                addLetter(letter, index) {
-                    if (this.usedLetters.includes(index)) return;
-                    
+
+                addLetter(letter) {
                     this.answer.push(letter);
-                    this.usedLetters.push(index);
                 },
-                
+
                 clearAnswer() {
                     this.answer = [];
-                    this.usedLetters = [];
                 },
-                
+
                 checkAnswer() {
                     if (!this.currentWord || this.answer.length === 0) return;
 
